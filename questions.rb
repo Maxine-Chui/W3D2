@@ -85,6 +85,10 @@ class User
     QuestionFollows.followed_questions_for_user_id(@id)
   end
 
+  def liked_questions
+    QuestionLike.liked_questions_for_user_id(@id)
+  end
+
 end
 
 class Question
@@ -184,6 +188,13 @@ class Question
     QuestionFollows.followers_for_question_id(@id)
   end
 
+  def likers
+    QuestionLike.likers_for_question_id(@id)
+  end
+  def num_likes
+    QuestionLike.num_likes_for_question_id(@id)
+
+  end
 end
 
 class QuestionFollows
@@ -436,11 +447,30 @@ class QuestionLike
     likers.map {|liker| User.new(liker)}
   end
 
-  def self.num_likes_for_quesiton_id(question_id)
-
+  def self.num_likes_for_question_id(question_id)
+    count = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+    SELECT
+      count(users_id)
+    FROM
+      question_likes
+    WHERE questions_id = ?
+    GROUP BY questions_id
+    SQL
+    count.first.values.first
   end
 
   def self.liked_questions_for_user_id(user_id)
+    questions = QuestionsDatabase.instance.execute(<<-SQL, user_id)
+    SELECT
+      *
+    FROM
+      questions
+    JOIN
+      question_likes on question_likes.users_id = users.id
+    WHERE
+      users_id = ?
+    SQL
+    questions.map {|liker| Question.new(liker)}
   end
 
 end
